@@ -128,12 +128,12 @@ namespace ISO_GML_Converter
             return new Point(Math.Cos(angle) * x - Math.Sin(angle) * y, Math.Sin(angle) * x + Math.Cos(angle) * y);
         }
 
-        public static Point operator  + (Point p1, Point p2)
+        public static Point operator +(Point p1, Point p2)
         {
             return new Point(p1.x + p2.x, p1.y + p2.y, p1.z + p2.z);
         }
 
-        public static Point operator - (Point p1, Point p2)
+        public static Point operator -(Point p1, Point p2)
         {
             return new Point(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
         }
@@ -276,7 +276,7 @@ namespace ISO_GML_Converter
             if (point.DPD_x != null)
             {
                 var DPD = datalogdata.Where(data => data.DPD.DDI == point.DPD_x.DDI && data.DPD.element == point.DPD_x.element);
-                if(DPD.Count() == 1)
+                if (DPD.Count() == 1)
                 {
                     point.x = (double)((LogElementType<System.Int32>)DPD.Single()).values[index] * 0.001;
                 }
@@ -352,14 +352,15 @@ namespace ISO_GML_Converter
         void run(string[] args)
         {
             string taskfilename = Directory.GetCurrentDirectory() + "\\TASKDATA.XML";
+            string outputPath = "";
 
             foreach (var arg in args)
             {
                 if (arg.StartsWith("-"))
                 {
                     string[] options = arg.Split('=');
-                                           
-                    switch(options[0])
+
+                    switch (options[0])
                     {
                         case "-c":
                         case "-cartesian":
@@ -371,7 +372,7 @@ namespace ISO_GML_Converter
                             break;
                         case "-o":
                         case "-output":
-                            switch(options[1])
+                            switch (options[1])
                             {
                                 case "GML":
                                 case "gml":
@@ -387,6 +388,14 @@ namespace ISO_GML_Converter
                                     return;
                             }
                             break;
+                        case "-ifp":
+                        case "-inputFilePath":
+                            taskfilename = options[1];
+                            break;
+                        case "-op":
+                        case "-outputPath":
+                            outputPath = options[1];
+                            break;
                         default:
                             var version = Assembly.GetEntryAssembly().GetName().Version;
                             var buildDateTime = new DateTime(2000, 1, 1).Add(new TimeSpan(TimeSpan.TicksPerDay * version.Build + TimeSpan.TicksPerSecond * 2 * version.Revision));
@@ -394,7 +403,7 @@ namespace ISO_GML_Converter
                             Console.WriteLine(Assembly.GetEntryAssembly().GetName().Name + " " + version.Major + "." + version.Minor + " BUILD " + buildDateTime);
                             Console.WriteLine("");
                             Console.WriteLine("USE: ");
-                            Console.WriteLine(Assembly.GetEntryAssembly().GetName().Name + " [drive:][path][filename] [-o=[GML, CSV]] [-c] [-n]"); 
+                            Console.WriteLine(Assembly.GetEntryAssembly().GetName().Name + " [drive:][path][filename] [-o=[GML, CSV]] [-c] [-n]");
                             Console.WriteLine("Parameters:");
                             Console.WriteLine("-o/-output=[GML, CSV]    Select output file type");
                             Console.WriteLine("-c/-cartesian            Use cartesian output instead of WGS84");
@@ -409,12 +418,12 @@ namespace ISO_GML_Converter
                         taskfilename = Directory.GetCurrentDirectory() + "\\" + taskfilename;
                 }
             }
-                            
+
 
             Console.WriteLine("Open file " + taskfilename);
             Console.WriteLine("==============================================");
-                                   
-            if (!convertTaskFile(taskfilename))
+
+            if (!convertTaskFile(taskfilename, outputPath))
             {
                 Console.WriteLine("ERROR IN CONVERTING FILE");
                 return;
@@ -490,7 +499,7 @@ namespace ISO_GML_Converter
             var DPT_offsetX = element.Ancestors("DVC").Single().Descendants("DPT").Where(dpt => DOR.Contains(dpt.Attribute("A").Value) && Convert.ToInt32(dpt.Attribute("B").Value, 16) == 134);
             if (DPT_offsetX.Any())
                 point.x = (double)Int32.Parse(DPT_offsetX.Single().Attribute("C").Value) * 0.001;
-            
+
             var DPT_offsetY = element.Ancestors("DVC").Single().Descendants("DPT").Where(dpt => DOR.Contains(dpt.Attribute("A").Value) && Convert.ToInt32(dpt.Attribute("B").Value, 16) == 135);
             if (DPT_offsetY.Any())
                 point.y = -(double)Int32.Parse(DPT_offsetY.Single().Attribute("C").Value) * 0.001;
@@ -572,9 +581,9 @@ namespace ISO_GML_Converter
                         connection.DPD_type = new DPD_Reference(CRP_1_DET.Attribute("A").Value, ConnectionTypeDPD.Single().Attribute("B").Value);
                     if (ConnectionTypeDPT.Any())
                         connection.type = Connection.DDIValueToConnection(Int32.Parse(ConnectionTypeDPT.Single().Attribute("C").Value));
-                    
+
                     var DRP_1 = DVC_1.Descendants("DET").Where(det => det.Attribute("F").Value == "0").Single();
-                    if (!hasGeometryOffset(DRP_1))  
+                    if (!hasGeometryOffset(DRP_1))
                     {
                         TLGdata.geometry.Add(new TractorImplementGeometry()
                         {
@@ -648,7 +657,7 @@ namespace ISO_GML_Converter
                     }
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 Console.WriteLine("ERROR IN EXTRACTING GEOMETRY INFORMATION");
                 Console.WriteLine(ex.ToString());
@@ -690,7 +699,7 @@ namespace ISO_GML_Converter
                 Console.WriteLine("ImplementCRP: " + geometry.ImplementCRP);
                 Console.WriteLine("ImplementERP: " + geometry.ImplementERP);
 
-                if(geometry.yaw != null)
+                if (geometry.yaw != null)
                     Console.WriteLine("Yaw angle: <" + geometry.yaw.element + " (" + geometry.yaw.DDI + ")>");
 
                 Console.WriteLine("----------------------------------------------");
@@ -757,20 +766,20 @@ namespace ISO_GML_Converter
                 try
                 {
                     var DOR = DET.Descendants("DOR").Attributes("A").Select(atr => atr.Value).ToList();
-                    var DPD = DET.Parent.Descendants("DPD").Where(dpd => DOR.Contains(dpd.Attribute("A").Value) && dpd.Attribute("B").Value == ProcessDataDDI);
+                    var DPD = DET.Parent.Descendants("DPD").Where(dpd => DOR.Contains(dpd.Attribute("A").Value) && dpd.Attribute("B").Value == ProcessDataDDI).Single();
 
                     string DVCdesignator = DET.Parent.Attribute("A").Value;
-                    if(DET.Parent.Attribute("B") != null)
-                        DVCdesignator = DET.Parent.Attribute("B").Value;  
+                    if (DET.Parent.Attribute("B") != null)
+                        DVCdesignator = DET.Parent.Attribute("B").Value;
 
-                    string DETdesignator = "_" + DET.Attribute("A").Value; 
-                    if(DET.Attribute("D") != null)
+                    string DETdesignator = "_" + DET.Attribute("A").Value;
+                    if (DET.Attribute("D") != null)
                         DETdesignator = "_" + DET.Attribute("D").Value;
 
                     string DPDdesignator = "_" + ProcessDataDDI;
-                    if (DPD.Any())
+                    if (DPD.Attribute("E") != null)
                     {
-                        DPDdesignator = "_" + DPD.Single().Attribute("E").Value; // Note! optional attribute --> Use DDI description instead
+                        DPDdesignator = "_" + DPD.Attribute("E") != null ? DPD.Attribute("E").Value : "";; // Note! optional attribute --> Use DDI description instead
                     }
 
                     string name = DVCdesignator + DETdesignator + DPDdesignator;
@@ -799,7 +808,7 @@ namespace ISO_GML_Converter
                     string name = DeviceElementIdRef + "_" + ProcessDataDDI;
 
                     // Special case for PNG based logging, take name from other attributes
-                    if (String.Equals(ProcessDataDDI,"DFFE", StringComparison.OrdinalIgnoreCase))
+                    if (String.Equals(ProcessDataDDI, "DFFE", StringComparison.OrdinalIgnoreCase))
                     {
                         name = DeviceElementIdRef + "_PGN_" + DLV.Attribute("D").Value + "_BITS_" + DLV.Attribute("E").Value + "_TO_" + DLV.Attribute("F").Value;
                     }
@@ -966,10 +975,10 @@ namespace ISO_GML_Converter
             double angle = angle1 - angle2;
 
             while (angle > Math.PI)
-                angle -= 2*Math.PI;
+                angle -= 2 * Math.PI;
 
             while (angle < -Math.PI)
-                angle += 2*Math.PI;
+                angle += 2 * Math.PI;
 
             return angle;
         }
@@ -1010,7 +1019,7 @@ namespace ISO_GML_Converter
             double dx = 0;
             double dy = 0;
 
-            for (int i=1; i<longitude.Count; i++)
+            for (int i = 1; i < longitude.Count; i++)
             {
                 GpsUtils.GeodeticToEnu(latitude[i] * 0.0000001, longitude[i] * 0.0000001, height[i] * 0.001,
                                           lat0, lon0, h0,
@@ -1057,7 +1066,7 @@ namespace ISO_GML_Converter
                 }
                 else
                 {
-                    yawGNSS.Add(yawGNSS[i-1]);
+                    yawGNSS.Add(yawGNSS[i - 1]);
                 }
             }
 
@@ -1069,18 +1078,18 @@ namespace ISO_GML_Converter
             List<System.Double> yawFiltered = new List<double>();
             yawFiltered.Add(yawGNSS[0]);
             yawFiltered.Add(yawGNSS[1]);
-            for (int i=2; i< yawGNSS.Count-2; i++)
+            for (int i = 2; i < yawGNSS.Count - 2; i++)
             {
                 double angle = 0;
                 for (int j = -2; j < 3; j++)
-                    angle += yawGNSS[i] + angleDiff(yawGNSS[i+j], yawGNSS[i]);
+                    angle += yawGNSS[i] + angleDiff(yawGNSS[i + j], yawGNSS[i]);
                 yawFiltered.Add(angle / 5);
             }
             yawFiltered.Add(yawGNSS[yawGNSS.Count - 2]);
             yawFiltered.Add(yawGNSS[yawGNSS.Count - 1]);
             yawGNSS = yawFiltered;
 
-            
+
             // simulate geometry information
             foreach (var geometry in TLGdata.geometry)
             {
@@ -1115,7 +1124,7 @@ namespace ISO_GML_Converter
                     position += geometry.getValues(geometry.TractorCRP, i).RotateZ(yaw[i]);
 
                     // simulate the implement angle
-                    switch(geometry.getConnection(i))
+                    switch (geometry.getConnection(i))
                     {
                         case Connection.ConnectionType.Mounted:
                             implementYaw = yaw[i];
@@ -1128,7 +1137,7 @@ namespace ISO_GML_Converter
                             {
                                 Point speed = position - CRP;
                                 double tangentSpeed = speed.DotProduct(new Point(0, 1).RotateZ(implementYaw));
-                                implementYaw += tangentSpeed / geometry.getValues(geometry.ImplementCRP, i).x; 
+                                implementYaw += tangentSpeed / geometry.getValues(geometry.ImplementCRP, i).x;
                             }
                             else
                             {
@@ -1138,7 +1147,7 @@ namespace ISO_GML_Converter
 
                             break;
                     }
-                    
+
                     // calculate the postion of the implement's DRP
                     position -= geometry.getValues(geometry.ImplementCRP, i).RotateZ(implementYaw);
 
@@ -1177,7 +1186,7 @@ namespace ISO_GML_Converter
             return true;
         }
 
-        bool convertTaskFile(String filename)
+        bool convertTaskFile(String filename, String outputPath = "")
         {
             bool retvalue = true;
 
@@ -1218,13 +1227,22 @@ namespace ISO_GML_Converter
 
             ISOTaskFile.Root.Descendants("XFR").Remove();
 
-                        
+
             // extract TASK information
-            foreach(var TSK in ISOTaskFile.Root.Descendants("TSK"))
+            foreach (var TSK in ISOTaskFile.Root.Descendants("TSK"))
             {
                 TLGdata.taskname = TSK.Attribute("B").Value;
-                TLGdata.field = ISOTaskFile.Root.Descendants("PFD").Where(pdf => pdf.Attribute("A").Value == TSK.Attribute("E").Value).Single().Attribute("C").Value;
-                if (ISOTaskFile.Root.Descendants("FRM").Count() > 0)
+                if (TSK.Attribute("E") == null)
+                {
+                    continue;
+                }
+                var E_TaskValue = TSK.Attribute("E") != null ? TSK.Attribute("E").Value : "";
+                var pfdNode = ISOTaskFile.Root.Descendants("PFD").Where(pdf => (pdf.Attribute("A").Value == E_TaskValue));
+                if (pfdNode != null)
+                {
+                    TLGdata.field = pfdNode.Single().Attribute("C").Value;
+                }
+                if (ISOTaskFile.Root.Descendants("FRM").Count() > 0 && false)
                 {
                     TLGdata.farm = ISOTaskFile.Root.Descendants("FRM").Where(frm => frm.Attribute("A").Value == TSK.Attribute("D").Value).Single().Attribute("B").Value;
                 }
@@ -1232,8 +1250,8 @@ namespace ISO_GML_Converter
                 {
                     TLGdata.farm = "";
                 }
-                    
-                
+
+
                 List<string> devicelist = TSK.Elements("DAN").Attributes("C").Select(attr => attr.Value).ToList();
                 TLGdata.devices = ISOTaskFile.Root.Descendants("DVC").Where(dvc => devicelist.Contains(dvc.Attribute("A").Value)).Attributes("B").Select(attr => attr.Value).ToList();
 
@@ -1257,7 +1275,7 @@ namespace ISO_GML_Converter
                             geometry.datalogheader.Clear();
                             geometry.datalogdata.Clear();
                         }
-                            
+
                         continue;
                     }
 
@@ -1275,7 +1293,9 @@ namespace ISO_GML_Converter
                         {
                             if (outputType == OutputType.GML)
                             {
-                                if (!writeGMLFile(generateName(TLG.Attribute("A").Value + " " + geometry.description) + ".GML", geometry.datalogheader, geometry.datalogdata))
+                                string fileNameWithPath = generateName(TLG.Attribute("A").Value + " " + geometry.description) + ".GML";
+                                fileNameWithPath = outputPath == "" ? fileNameWithPath : Path.Combine(outputPath, fileNameWithPath);
+                                if (!writeGMLFile(fileNameWithPath, geometry.datalogheader, geometry.datalogdata))
                                 {
                                     Console.WriteLine("ERROR IN WRITING GML");
                                     retvalue = false;
@@ -1283,7 +1303,9 @@ namespace ISO_GML_Converter
                             }
                             else if (outputType == OutputType.CSV)
                             {
-                                if (!writeCSVFile(generateName(TLG.Attribute("A").Value + " " + geometry.description) + ".CSV", geometry.datalogheader, geometry.datalogdata))
+                                string fileNameWithPath = generateName(TLG.Attribute("A").Value + " " + geometry.description) + ".CSV";
+                                fileNameWithPath = outputPath == "" ? fileNameWithPath : Path.Combine(outputPath, fileNameWithPath);
+                                if (!writeCSVFile(fileNameWithPath, geometry.datalogheader, geometry.datalogdata))
                                 {
                                     Console.WriteLine("ERROR IN WRITING GML");
                                     retvalue = false;
@@ -1316,15 +1338,15 @@ namespace ISO_GML_Converter
             LogElementType<System.Int32> longitude = (LogElementType<System.Int32>)datalogheader.Where(header => header.name == "PositionEast").Single();
             LogElementType<System.Int32> latitude = (LogElementType<System.Int32>)datalogheader.Where(header => header.name == "PositionNorth").Single();
             LogElementType<System.Int32> height;
-            
+
             // If data is missing height use 0
             var heightData = datalogheader.Where(header => header.name == "PositionUp").ToList();
             if (heightData.Count > 0)
             {
                 height = (LogElementType<System.Int32>)heightData.First();
             }
-            else 
-            { 
+            else
+            {
                 height = new LogElementType<System.Int32>("height");
                 height.values = new List<System.Int32>(new System.Int32[latitude.values.Count]);
             }
@@ -1347,15 +1369,15 @@ namespace ISO_GML_Converter
 
             while (index < datalogheader.ElementAt(0).getSize())
             {
-                XElement datapoint = new XElement(tnt + (TLGdata.taskname.Replace("+", "_").Replace(" ", "_").Replace("&", "_") + "_point"));
-                
+                XElement datapoint = new XElement(tnt + ("_" + TLGdata.taskname.Replace("+", "_").Replace(" ", "_").Replace("&", "_") + "_point"));
+
                 foreach (var header in datalogheader)
                 {
                     if (header.name != "PositionNorth" && header.name != "PositionEast" && header.name != "PositionUp")
                         datapoint.Add(new XElement(tnt + header.name.Replace(" ", "_"), header.getValueString(index)));
                 }
-                    
-                
+
+
                 foreach (var element in datalogdata)
                 {
                     string elName = element.name.Replace(" ", "_").Replace("&", "_").Replace("(", "_").Replace(")", "_").Replace("/", "_");
@@ -1363,7 +1385,7 @@ namespace ISO_GML_Converter
                         elName = "X" + elName;
                     datapoint.Add(new XElement(tnt + elName, element.getValueString(index)));
                 }
-                
+
 
                 datapoint.Add(new XElement(tnt + "_POINT_",
                         new XElement(gml + "Point",
@@ -1373,7 +1395,7 @@ namespace ISO_GML_Converter
                                     latitude.values.ElementAt(index) * 0.0000001 + "," +
                                     height.values.ElementAt(index) * 0.001
                                 )
-                            )    
+                            )
                     )
                 );
 
@@ -1383,7 +1405,7 @@ namespace ISO_GML_Converter
             }
 
             GMLFile.Save(filename);
-            
+
             return true;
         }
 
@@ -1391,7 +1413,7 @@ namespace ISO_GML_Converter
 
         bool writeCSVFile(String filename, List<LogElement> datalogheader, List<LogElement> datalogdata)
         {
-            
+
             StreamWriter file = new StreamWriter(filename);
 
             // Write variable names to the first line
@@ -1430,7 +1452,7 @@ namespace ISO_GML_Converter
                 file.Write("\n");
                 index++;
             }
-                        
+
 
             return true;
         }
